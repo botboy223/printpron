@@ -170,7 +170,7 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 100, // Adjust size to fit your needs
+                width: 100,
                 height: 100,
                 data: upiUrl,
                 dotsOptions: {
@@ -190,8 +190,8 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF optimized for thermal printers with minimal blank space
-            const doc = new jsPDF('p', 'mm', 'a4'); // Use default A4 but will adjust size dynamically
+            // Create PDF optimized for thermal printers
+            const doc = new jsPDF('p', 'mm', [80, 297]); // Adjusting dimensions for a receipt
     
             let yPos = 5; // Start with minimal top margin
     
@@ -231,14 +231,12 @@ domReady(function () {
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                // Adjust QR code size and placement to minimize space
-                doc.addImage(qrData, 'PNG', 5, yPos + 5, 40, 40);
+                doc.addImage(qrData, 'PNG', 5, yPos + 5, 40, 40); // Adjust placement to not overlap content
             }
     
             // Adjust PDF size to content
             const contentHeight = yPos + 50; // Add some extra for QR code or other elements
             doc.internal.pageSize.height = contentHeight;
-            doc.internal.pageSize.width = 80; // Width for thermal receipt
     
             // Save to history
             billHistory.push({
@@ -258,9 +256,10 @@ domReady(function () {
             displayCart();
             updateDashboard();
     
-            // Directly start printing without showing PDF in a new window
-            doc.autoPrint();
-            doc.output('dataurlnewwindow');
+            // Instead of autoPrint, we'll open the PDF in a new window for manual adjustment
+            const pdfBlob = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank');
     
         } catch (error) {
             alert(`Error: ${error.message}`);
