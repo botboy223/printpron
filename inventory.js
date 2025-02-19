@@ -154,88 +154,86 @@ domReady(function () {
             if (!upiDetails.upiId || !upiDetails.name || !upiDetails.note) {
                 throw new Error('Please configure UPI details first');
             }
-
+    
             // Calculate total
             const totalAmount = cart.reduce((sum, item) => {
                 const product = productDetails[item.code];
                 return sum + (product?.price || 0) * item.quantity;
             }, 0);
-
+    
             // Generate UPI URL
             const upiUrl = `upi://pay?pa=${upiDetails.upiId}` +
                             `&pn=${encodeURIComponent(upiDetails.name)}` +
                             `&am=${totalAmount.toFixed(2)}` +
                             `&cu=INR` +
                             `&tn=${encodeURIComponent(upiDetails.note)}`;
-
+    
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 200,
-                height: 200,
+                width: 100, // Smaller size for thermal printers
+                height: 100,
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
-                    type: "rounded"
+                    type: "square" // Square dots might scan better on thermal prints
                 },
                 backgroundOptions: {
                     color: "#ffffff"
                 }
             });
-
+    
             // Render QR Code
             const qrContainer = document.getElementById('bill-qr-code');
             qrContainer.innerHTML = '';
             qrCode.append(qrContainer);
-
+    
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Create PDF
-            const doc = new jsPDF();
-            let yPos = 20;
-
+    
+            // Create PDF optimized for thermal printers
+            const doc = new jsPDF('p', 'mm', [80, 297]); // A4 dimensions, but width reduced for thermal receipt
+    
+            let yPos = 5; // Start with less space at the top for thermal printers
+    
             // Header
-            doc.setFontSize(22);
-            doc.text("INVOICE", 105, yPos, { align: 'center' });
-            yPos += 15;
-
+            doc.setFontSize(14); // Smaller font for better fit
+            doc.text("INVOICE", 40, yPos, null, null, 'center');
+            yPos += 10;
+    
             // Invoice Details
-            doc.setFontSize(12);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPos);
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 160, yPos);
-            yPos += 15;
-
+            doc.setFontSize(10);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 5, yPos);
+            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 45, yPos);
+            yPos += 10;
+    
             // Table Header
-            doc.setFillColor(240, 240, 240);
-            doc.rect(20, yPos, 170, 10, 'F');
-            doc.setFontSize(12);
-            doc.text("Item", 22, yPos + 7);
-            doc.text("Qty", 100, yPos + 7);
-            doc.text("Price", 160, yPos + 7);
-            yPos += 12;
-
+            doc.setFontSize(10);
+            doc.text("Item", 5, yPos);
+            doc.text("Qty", 40, yPos);
+            doc.text("Price", 55, yPos);
+            yPos += 5;
+    
             // Items
             cart.forEach(item => {
                 const product = productDetails[item.code];
-                doc.setFontSize(10);
-                doc.text(product?.name || 'Unknown Item', 22, yPos);
-                doc.text(item.quantity.toString(), 102, yPos);
-                doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 162, yPos);
-                yPos += 8;
+                doc.text(product?.name || 'Unknown Item', 5, yPos);
+                doc.text(item.quantity.toString(), 40, yPos);
+                doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 55, yPos);
+                yPos += 5;
             });
-
+    
             // Total
-            yPos += 10;
-            doc.setFontSize(14);
-            doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 20, yPos);
-
+            yPos += 5;
+            doc.setFontSize(12);
+            doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 5, yPos);
+    
             // Add QR Code
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 140, yPos - 10, 50, 50);
+                doc.addImage(qrData, 'PNG', 60, yPos + 5, 20, 20); // Smaller QR code placement
             }
-
+    
             // Save to history
             billHistory.push({
                 date: new Date().toLocaleString(),
@@ -243,7 +241,7 @@ domReady(function () {
                 items: [...cart]
             });
             saveToLocalStorage('billHistory', billHistory);
-
+    
             // Update inventory and save changes after bill generation
             cart.forEach(item => {
                 updateInventory(item.code, item.quantity);
@@ -253,17 +251,16 @@ domReady(function () {
             cart = [];
             displayCart();
             updateDashboard();
-
+    
             // Open PDF
             const pdfBlob = doc.output('blob');
             window.open(URL.createObjectURL(pdfBlob), '_blank');
-
+    
         } catch (error) {
             alert(`Error: ${error.message}`);
             console.error(error);
         }
     });
-
     // UPI Form Handler
     document.getElementById('qrForm').addEventListener('submit', (e) => {
         e.preventDefault();
