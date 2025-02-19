@@ -170,12 +170,12 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 100, // Smaller size for thermal printers
-                height: 100,
+                width: 150, // Increased size for better scanning
+                height: 150,
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
-                    type: "square" // Square dots might scan better on thermal prints
+                    type: "square"
                 },
                 backgroundOptions: {
                     color: "#ffffff"
@@ -193,10 +193,10 @@ domReady(function () {
             // Create PDF optimized for thermal printers
             const doc = new jsPDF('p', 'mm', [80, 297]); // A4 dimensions, but width reduced for thermal receipt
     
-            let yPos = 5; // Start with less space at the top for thermal printers
+            let yPos = 5; // Start with less space at the top
     
             // Header
-            doc.setFontSize(14); // Smaller font for better fit
+            doc.setFontSize(14);
             doc.text("INVOICE", 40, yPos, null, null, 'center');
             yPos += 10;
     
@@ -231,7 +231,7 @@ domReady(function () {
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 60, yPos + 5, 20, 20); // Smaller QR code placement
+                doc.addImage(qrData, 'PNG', 10, yPos + 10, 60, 60); // Larger QR code placement
             }
     
             // Save to history
@@ -252,9 +252,9 @@ domReady(function () {
             displayCart();
             updateDashboard();
     
-            // Open PDF
-            const pdfBlob = doc.output('blob');
-            window.open(URL.createObjectURL(pdfBlob), '_blank');
+            // Ensure only the content is printed, no blank pages
+            doc.autoPrint();
+            doc.output('dataurlnewwindow');
     
         } catch (error) {
             alert(`Error: ${error.message}`);
