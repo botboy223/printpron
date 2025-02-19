@@ -150,95 +150,83 @@ domReady(function () {
     // PDF Generation
     document.getElementById('generate-bill').addEventListener('click', async () => {
         try {
-            // Validate UPI details
             if (!upiDetails.upiId || !upiDetails.name || !upiDetails.note) {
                 throw new Error('Please configure UPI details first');
             }
     
-            // Calculate total
             const totalAmount = cart.reduce((sum, item) => {
                 const product = productDetails[item.code];
                 return sum + (product?.price || 0) * item.quantity;
             }, 0);
     
-            // Generate UPI URL
             const upiUrl = `upi://pay?pa=${upiDetails.upiId}` +
                             `&pn=${encodeURIComponent(upiDetails.name)}` +
                             `&am=${totalAmount.toFixed(2)}` +
                             `&cu=INR` +
                             `&tn=${encodeURIComponent(upiDetails.note)}`;
     
-            // Create QR Code
             const qrCode = new QRCodeStyling({
                 width: 100,
                 height: 100,
                 data: upiUrl,
-                dotsOptions: {
-                    color: "#000",
-                    type: "square"
-                },
-                backgroundOptions: {
-                    color: "#ffffff"
-                }
+                dotsOptions: { color: "#000", type: "square" },
+                backgroundOptions: { color: "#ffffff" }
             });
     
-            // Render QR Code
             const qrContainer = document.getElementById('bill-qr-code');
             qrContainer.innerHTML = '';
             qrCode.append(qrContainer);
     
-            // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Calculate height based on content
-            const itemCount = cart.length;
-            const height = 20 + 16 + (4 * itemCount) + 12 + 100; // Header, date, items, total, QR code space
+            // **Calculate Required Height**
+            let requiredHeight = 40 + cart.length * 6 + 20; // Base + Items + QR Code Space
+            requiredHeight = Math.max(requiredHeight, 60); // Minimum height safeguard
     
-            // Create PDF dynamically sized based on content
-            const doc = new jsPDF('p', 'mm', [80, height]);
+            // **Create PDF with Dynamic Height**
+            const doc = new jsPDF('p', 'mm', [80, requiredHeight]);
     
             let yPos = 5;
     
-            // Header
+            // **Header**
             doc.setFontSize(12);
             doc.text("INVOICE", 40, yPos, null, null, 'center');
-            yPos += 8;
+            yPos += 6;
     
-            // Invoice Details
             doc.setFontSize(9);
             doc.text(`Date: ${new Date().toLocaleDateString()}`, 5, yPos);
             doc.text(`Time: ${new Date().toLocaleTimeString()}`, 45, yPos);
-            yPos += 8;
+            yPos += 6;
     
-            // Table Header
+            // **Table Header**
             doc.setFontSize(9);
             doc.text("Item", 5, yPos);
             doc.text("Qty", 40, yPos);
             doc.text("Price", 55, yPos);
             yPos += 4;
     
-            // Items
+            // **Items**
             cart.forEach(item => {
                 const product = productDetails[item.code];
                 doc.text(product?.name || 'Unknown Item', 5, yPos);
                 doc.text(item.quantity.toString(), 40, yPos);
                 doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 55, yPos);
-                yPos += 4;
+                yPos += 6;
             });
     
-            // Total
             yPos += 4;
             doc.setFontSize(10);
             doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 5, yPos);
+            yPos += 10;
     
-            // Add QR Code right after the total
+            // **QR Code**
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 10, yPos + 6, 60, 60); // Place QR code directly after total
+                doc.addImage(qrData, 'PNG', 10, yPos, 60, 60);
+                yPos += 65;
             }
     
-            // Save to history
             billHistory.push({
                 date: new Date().toLocaleString(),
                 total: totalAmount.toFixed(2),
@@ -246,17 +234,14 @@ domReady(function () {
             });
             saveToLocalStorage('billHistory', billHistory);
     
-            // Update inventory and save changes after bill generation
             cart.forEach(item => {
                 updateInventory(item.code, item.quantity);
             });
-            
-            // Clear cart
+    
             cart = [];
             displayCart();
             updateDashboard();
     
-            // Ensure only the content is printed, no blank pages
             doc.autoPrint();
             doc.output('dataurlnewwindow');
     
@@ -265,6 +250,7 @@ domReady(function () {
             console.error(error);
         }
     });
+
     // UPI Form Handler
     document.getElementById('qrForm').addEventListener('submit', (e) => {
         e.preventDefault();
