@@ -170,8 +170,8 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 150, // Increased size for better scanning
-                height: 150,
+                width: 100, // Adjust size to fit your needs
+                height: 100,
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
@@ -190,10 +190,10 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF optimized for thermal printers
-            const doc = new jsPDF('p', 'mm', [80, 297]); // A4 dimensions, but width reduced for thermal receipt
+            // Create PDF optimized for thermal printers with minimal blank space
+            const doc = new jsPDF('p', 'mm', 'a4'); // Use default A4 but will adjust size dynamically
     
-            let yPos = 5; // Start with less space at the top
+            let yPos = 5; // Start with minimal top margin
     
             // Header
             doc.setFontSize(14);
@@ -231,8 +231,14 @@ domReady(function () {
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 10, yPos + 10, 60, 60); // Larger QR code placement
+                // Adjust QR code size and placement to minimize space
+                doc.addImage(qrData, 'PNG', 5, yPos + 5, 40, 40);
             }
+    
+            // Adjust PDF size to content
+            const contentHeight = yPos + 50; // Add some extra for QR code or other elements
+            doc.internal.pageSize.height = contentHeight;
+            doc.internal.pageSize.width = 80; // Width for thermal receipt
     
             // Save to history
             billHistory.push({
@@ -252,7 +258,7 @@ domReady(function () {
             displayCart();
             updateDashboard();
     
-            // Ensure only the content is printed, no blank pages
+            // Directly start printing without showing PDF in a new window
             doc.autoPrint();
             doc.output('dataurlnewwindow');
     
