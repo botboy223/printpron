@@ -170,7 +170,7 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 100, // Adjust size to fit better on small receipts
+                width: 100,
                 height: 100,
                 data: upiUrl,
                 dotsOptions: {
@@ -190,18 +190,22 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF optimized for thermal printers
-            const doc = new jsPDF('p', 'mm', [80, 200]); // Adjust dimensions to fit content
+            // Calculate height based on content
+            const itemCount = cart.length;
+            const height = 20 + 16 + (4 * itemCount) + 12 + 100; // Header, date, items, total, QR code space
     
-            let yPos = 5; // Start with minimal space at the top
+            // Create PDF dynamically sized based on content
+            const doc = new jsPDF('p', 'mm', [80, height]);
+    
+            let yPos = 5;
     
             // Header
-            doc.setFontSize(12); // Smaller header font to save space
+            doc.setFontSize(12);
             doc.text("INVOICE", 40, yPos, null, null, 'center');
-            yPos += 8; // Less space after header
+            yPos += 8;
     
             // Invoice Details
-            doc.setFontSize(9); // Smaller text for details
+            doc.setFontSize(9);
             doc.text(`Date: ${new Date().toLocaleDateString()}`, 5, yPos);
             doc.text(`Time: ${new Date().toLocaleTimeString()}`, 45, yPos);
             yPos += 8;
@@ -211,7 +215,7 @@ domReady(function () {
             doc.text("Item", 5, yPos);
             doc.text("Qty", 40, yPos);
             doc.text("Price", 55, yPos);
-            yPos += 4; // Less space after table header
+            yPos += 4;
     
             // Items
             cart.forEach(item => {
@@ -219,20 +223,19 @@ domReady(function () {
                 doc.text(product?.name || 'Unknown Item', 5, yPos);
                 doc.text(item.quantity.toString(), 40, yPos);
                 doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 55, yPos);
-                yPos += 4; // Minimal space between items
+                yPos += 4;
             });
     
             // Total
-            yPos += 4; // Space before total
-            doc.setFontSize(10); // Slightly smaller for total but still visible
+            yPos += 4;
+            doc.setFontSize(10);
             doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 5, yPos);
     
-            // Add QR Code
+            // Add QR Code right after the total
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                const qrSize = Math.min(80, yPos + 15); // Adjust QR code size to fit available space
-                doc.addImage(qrData, 'PNG', 10, qrSize, 60, 60); // Adjust placement dynamically
+                doc.addImage(qrData, 'PNG', 10, yPos + 6, 60, 60); // Place QR code directly after total
             }
     
             // Save to history
