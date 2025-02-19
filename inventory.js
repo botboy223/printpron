@@ -160,10 +160,10 @@ domReady(function () {
             }, 0);
     
             const upiUrl = `upi://pay?pa=${upiDetails.upiId}` +
-                            `&pn=${encodeURIComponent(upiDetails.name)}` +
-                            `&am=${totalAmount.toFixed(2)}` +
-                            `&cu=INR` +
-                            `&tn=${encodeURIComponent(upiDetails.note)}`;
+                          `&pn=${encodeURIComponent(upiDetails.name)}` +
+                          `&am=${totalAmount.toFixed(2)}` +
+                          `&cu=INR` +
+                          `&tn=${encodeURIComponent(upiDetails.note)}`;
     
             const qrCode = new QRCodeStyling({
                 width: 100,
@@ -179,33 +179,39 @@ domReady(function () {
     
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // **Calculate Required Height**
-            let requiredHeight = 40 + cart.length * 6 + 20; // Base + Items + QR Code Space
-            requiredHeight = Math.max(requiredHeight, 60); // Minimum height safeguard
+            // Calculate exact content height
+            let requiredHeight = 5; // Initial Y position
+            requiredHeight += 6;    // Invoice header
+            requiredHeight += 6;    // Date/Time
+            requiredHeight += 4;    // Table header
+            requiredHeight += cart.length * 6; // Items
+            requiredHeight += 4;    // After items
+            requiredHeight += 10;   // Total amount
+            requiredHeight += 60;   // QR code height
+            requiredHeight = Math.max(requiredHeight, 60); // Minimum height
     
-            // **Create PDF with Dynamic Height**
             const doc = new jsPDF('p', 'mm', [80, requiredHeight]);
-    
             let yPos = 5;
     
-            // **Header**
+            // Header
             doc.setFontSize(12);
             doc.text("INVOICE", 40, yPos, null, null, 'center');
             yPos += 6;
     
+            // Date/Time
             doc.setFontSize(9);
             doc.text(`Date: ${new Date().toLocaleDateString()}`, 5, yPos);
             doc.text(`Time: ${new Date().toLocaleTimeString()}`, 45, yPos);
             yPos += 6;
     
-            // **Table Header**
+            // Table Header
             doc.setFontSize(9);
             doc.text("Item", 5, yPos);
             doc.text("Qty", 40, yPos);
             doc.text("Price", 55, yPos);
             yPos += 4;
     
-            // **Items**
+            // Items List
             cart.forEach(item => {
                 const product = productDetails[item.code];
                 doc.text(product?.name || 'Unknown Item', 5, yPos);
@@ -214,19 +220,20 @@ domReady(function () {
                 yPos += 6;
             });
     
+            // Total Amount
             yPos += 4;
             doc.setFontSize(10);
             doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 5, yPos);
             yPos += 10;
     
-            // **QR Code**
+            // QR Code
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
                 doc.addImage(qrData, 'PNG', 10, yPos, 60, 60);
-                yPos += 65;
             }
     
+            // Save to history
             billHistory.push({
                 date: new Date().toLocaleString(),
                 total: totalAmount.toFixed(2),
@@ -234,14 +241,15 @@ domReady(function () {
             });
             saveToLocalStorage('billHistory', billHistory);
     
+            // Update inventory and clear cart
             cart.forEach(item => {
                 updateInventory(item.code, item.quantity);
             });
-    
             cart = [];
             displayCart();
             updateDashboard();
     
+            // Output PDF
             doc.autoPrint();
             doc.output('dataurlnewwindow');
     
@@ -250,7 +258,6 @@ domReady(function () {
             console.error(error);
         }
     });
-
     // UPI Form Handler
     document.getElementById('qrForm').addEventListener('submit', (e) => {
         e.preventDefault();
