@@ -168,14 +168,14 @@ domReady(function () {
                             `&cu=INR` +
                             `&tn=${encodeURIComponent(upiDetails.note)}`;
     
-            // Create QR Code with larger size
+            // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 300,
-                height: 300,
+                width: 250,  // Bigger QR code
+                height: 250, // Bigger QR code
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
-                    type: "square"
+                    type: "rounded"
                 },
                 backgroundOptions: {
                     color: "#ffffff"
@@ -187,80 +187,62 @@ domReady(function () {
             qrContainer.innerHTML = '';
             qrCode.append(qrContainer);
     
-            // Create PDF optimized for thermal printer
+            // Wait for QR code rendering
+            await new Promise(resolve => setTimeout(resolve, 500));
+    
+            // Create PDF
             const doc = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: [80, 'auto'] // Standard thermal printer width
+                unit: 'mm',      // Use millimeters for size
+                format: 'a4'     // Set default page format
             });
     
-            let yPos = 5;
-            const lineHeight = 8;
-            const margin = 5;
-            const maxWidth = 70;
+            let yPos = 20;
     
-            // Set bold font and larger text sizes
-            doc.setFont('helvetica', 'bold');
-            
             // Header
-            doc.setFontSize(16);
-            doc.text("INVOICE", margin, yPos, { align: 'left' });
-            yPos += lineHeight;
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');  // Set font to bold
+            doc.text("INVOICE", 105, yPos, { align: 'center' });
+            yPos += 15;
     
             // Invoice Details
             doc.setFontSize(12);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPos);
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, margin + 45, yPos);
-            yPos += lineHeight;
+            doc.setFont('helvetica', 'normal'); // Set font to normal for the details
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPos);
+            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 160, yPos);
+            yPos += 15;
     
-            // Divider line
-            doc.setLineWidth(0.5);
-            doc.line(margin, yPos, 75, yPos);
-            yPos += lineHeight;
-    
-            // Items Header
+            // Table Header
+            doc.setFillColor(240, 240, 240);
+            doc.rect(20, yPos, 170, 10, 'F');
             doc.setFontSize(12);
-            doc.text("ITEM", margin, yPos);
-            doc.text("QTY", margin + 45, yPos);
-            doc.text("PRICE", margin + 60, yPos);
-            yPos += lineHeight;
+            doc.text("Item", 22, yPos + 7);
+            doc.text("Qty", 100, yPos + 7);
+            doc.text("Price", 160, yPos + 7);
+            yPos += 12;
     
-            // Items List
+            // Items
             cart.forEach(item => {
                 const product = productDetails[item.code];
-                const itemName = product?.name || 'Unknown Item';
-                const price = (product?.price * item.quantity).toFixed(2);
-                
-                // Split long item names into multiple lines
-                const splitName = doc.splitTextToSize(itemName, 40);
-                splitName.forEach((line, index) => {
-                    doc.text(line, margin, yPos + (index * lineHeight/2));
-                });
-                
-                doc.text(item.quantity.toString(), margin + 50, yPos);
-                doc.text(`₹${price}`, margin + 65, yPos);
-                
-                // Adjust yPos based on number of lines
-                yPos += (splitName.length * lineHeight/2) + lineHeight/2;
+                doc.setFontSize(12);  // Bigger text for better readability
+                doc.setFont('helvetica', 'bold');  // Bold text for better visibility on thermal printers
+                doc.text(product?.name || 'Unknown Item', 22, yPos);
+                doc.text(item.quantity.toString(), 100, yPos);
+                doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 160, yPos);
+                yPos += 10;
             });
     
             // Total
-            yPos += lineHeight;
+            yPos += 10;
             doc.setFontSize(14);
-            doc.text(`TOTAL: ₹${totalAmount.toFixed(2)}`, margin, yPos);
-            yPos += lineHeight * 2;
+            doc.setFont('helvetica', 'bold');  // Bold font for total
+            doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 20, yPos);
     
             // Add QR Code
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', margin + 10, yPos, 60, 60);
-                yPos += 65;
+                doc.addImage(qrData, 'PNG', 140, yPos - 10, 50, 50); // Adjust QR size
             }
-    
-            // Footer
-            doc.setFontSize(10);
-            doc.text("Thank you for your purchase!", margin, yPos, { align: 'left' });
     
             // Save to history
             billHistory.push({
@@ -270,8 +252,12 @@ domReady(function () {
             });
             saveToLocalStorage('billHistory', billHistory);
     
-            // Update inventory and clear cart
-            cart.forEach(item => updateInventory(item.code, item.quantity));
+            // Update inventory and save changes after bill generation
+            cart.forEach(item => {
+                updateInventory(item.code, item.quantity);
+            });
+    
+            // Clear cart
             cart = [];
             displayCart();
             updateDashboard();
@@ -285,6 +271,7 @@ domReady(function () {
             console.error(error);
         }
     });
+
     // UPI Form Handler
     document.getElementById('qrForm').addEventListener('submit', (e) => {
         e.preventDefault();
