@@ -236,7 +236,7 @@ domReady(function () {
             doc.setFont('helvetica', 'bold');
             doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 10, yPos);
     
-            // Add QR Code (adjusted dynamically)
+            // Add QR Code dynamically
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
@@ -276,6 +276,7 @@ domReady(function () {
             console.error(error);
         }
     });
+
 
     // Import/Export Handlers
     document.getElementById('download-data').addEventListener('click', () => {
