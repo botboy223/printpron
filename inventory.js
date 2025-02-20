@@ -170,19 +170,19 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 200,
-                height: 200,
+                width: 384, // Full width in pixels (48mm at 203 DPI)
+                height: 384, // Square QR code
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
-                    type: "rounded"
+                    type: "square" // Sharp edges for better thermal printing
                 },
                 backgroundOptions: {
                     color: "#ffffff"
                 }
             });
     
-            // Render QR Code
+            // Render QR Code to a temporary container
             const qrContainer = document.getElementById('bill-qr-code');
             qrContainer.innerHTML = '';
             qrCode.append(qrContainer);
@@ -190,62 +190,69 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Calculate content height dynamically first
-            let yPos = 5; // Start position
-            const lineHeight = 6;
-            const qrHeight = 50; // QR code height in mm
-            const itemsHeight = cart.length * lineHeight; // Height for items
-            const totalHeight = yPos + 6 + 5 + 8 + itemsHeight + 6 + 10 + qrHeight + 10; // Total dynamic height
-    
-            // Create PDF with dynamic height
+            // Create PDF with 48mm width (2 inches); height will be dynamic
             const doc = new jsPDF({
-                unit: "mm",
-                format: [58, totalHeight], // Set dynamic height directly
-                orientation: "portrait"
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [48, 10] // Initial height of 10mm, will be adjusted dynamically
             });
     
-            // Set font and initial position
-            doc.setFont('courier', 'normal');
-            yPos = 5; // Reset yPos
+            // Variables for positioning
+            let yPos = 2; // Start close to the top
+            const lineHeight = 4; // Space between lines (adjust for readability)
+            const pageWidth = 48; // 2 inches in mm
+            const maxLineWidth = 40; // Max characters per line (approximate for 8pt font)
     
-            // Header
-            doc.setFontSize(12);
-            doc.setFont('courier', 'bold');
-            doc.text("INVOICE", 29, yPos, { align: 'center' });
-            yPos += 6;
+            // Set font to monospaced, small size for thermal printer
+            doc.setFont("courier"); // Monospaced font
+            doc.setFontSize(8); // Small font for receipts
+    
+            // Header (centered)
+            const headerText = "INVOICE";
+            doc.text(headerText, pageWidth / 2, yPos, { align: 'center' });
+            yPos += lineHeight;
     
             // Date and Time
-            doc.setFontSize(10);
-            doc.setFont('courier', 'normal');
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 2, yPos);
-            yPos += 5;
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 2, yPos);
-            yPos += 8;
+            const dateTime = `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+            doc.text(dateTime.substring(0, maxLineWidth), pageWidth / 2, yPos, { align: 'center' });
+            yPos += lineHeight;
     
-            // Items List
+            // Separator
+            doc.text("-".repeat(maxLineWidth), pageWidth / 2, yPos, { align: 'center' });
+            yPos += lineHeight;
+    
+            // Items
             cart.forEach(item => {
                 const product = productDetails[item.code];
-                doc.text(`${product?.name || 'Unknown Item'}`, 2, yPos);
-                doc.text(`Qty: ${item.quantity}`, 40, yPos);
-                doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 50, yPos);
+                const itemName = (product?.name || 'Unknown Item').substring(0, 20); // Truncate name
+                const qty = item.quantity.toString().padStart(2, ' ');
+                const price = (product?.price * item.quantity).toFixed(2).padStart(8, ' ');
+                const itemLine = `${itemName} x${qty} Rs.${price}`;
+                doc.text(itemLine.substring(0, maxLineWidth), 2, yPos); // Left-aligned
                 yPos += lineHeight;
             });
     
-            // Total Amount
-            yPos += 6;
-            doc.setFontSize(12);
-            doc.setFont('courier', 'bold');
-            doc.text(`Total: Rs. ${totalAmount.toFixed(2)}`, 2, yPos);
-            yPos += 10;
+            // Separator
+            doc.text("-".repeat(maxLineWidth), pageWidth / 2, yPos, { align: 'center' });
+            yPos += lineHeight;
     
-            // Add QR Code
+            // Total
+            const totalText = `Total: Rs. ${totalAmount.toFixed(2)}`;
+            doc.text(totalText.substring(0, maxLineWidth), pageWidth / 2, yPos, { align: 'center' });
+            yPos += lineHeight * 2; // Extra space before QR code
+    
+            // Add QR Code (full width)
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                const qrWidth = 50; // Full width of the paper (58mm - margins)
-                doc.addImage(qrData, 'PNG', 4, yPos, qrWidth, qrHeight);
-                yPos += qrHeight + 10;
+                doc.addImage(qrData, 'PNG', 0, yPos, pageWidth, pageWidth); // Full width (48mm)
+                yPos += pageWidth; // Adjust yPos by QR code height
             }
+    
+            // Adjust PDF height dynamically (no extra space)
+            const finalHeight = yPos + 2; // Small buffer at the bottom
+            doc.setPage(1); // Ensure we're on the first page
+            doc.internal.pageSize.height = finalHeight; // Set dynamic height
     
             // Save to history
             billHistory.push({
@@ -255,7 +262,7 @@ domReady(function () {
             });
             saveToLocalStorage('billHistory', billHistory);
     
-            // Update inventory and save changes
+            // Update inventory and save changes after bill generation
             cart.forEach(item => {
                 updateInventory(item.code, item.quantity);
             });
@@ -265,7 +272,7 @@ domReady(function () {
             displayCart();
             updateDashboard();
     
-            // Open PDF for printing
+            // Open PDF
             const pdfBlob = doc.output('blob');
             window.open(URL.createObjectURL(pdfBlob), '_blank');
     
