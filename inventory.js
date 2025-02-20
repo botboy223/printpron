@@ -155,7 +155,7 @@ domReady(function () {
                 throw new Error('Please configure UPI details first');
             }
     
-            // Calculate total amount
+            // Calculate total
             const totalAmount = cart.reduce((sum, item) => {
                 const product = productDetails[item.code];
                 return sum + (product?.price || 0) * item.quantity;
@@ -163,107 +163,104 @@ domReady(function () {
     
             // Generate UPI URL
             const upiUrl = `upi://pay?pa=${upiDetails.upiId}` +
-                          `&pn=${encodeURIComponent(upiDetails.name)}` +
-                          `&am=${totalAmount.toFixed(2)}` +
-                          `&cu=INR` +
-                          `&tn=${encodeURIComponent(upiDetails.note)}`;
+                            `&pn=${encodeURIComponent(upiDetails.name)}` +
+                            `&am=${totalAmount.toFixed(2)}` +
+                            `&cu=INR` +
+                            `&tn=${encodeURIComponent(upiDetails.note)}`;
     
-            // Create QR Code
+            // Create QR Code with larger size
             const qrCode = new QRCodeStyling({
-                width: 200,
-                height: 200,
+                width: 300,
+                height: 300,
                 data: upiUrl,
-                dotsOptions: { color: "#000", type: "square" },
-                backgroundOptions: { color: "#ffffff" }
+                dotsOptions: {
+                    color: "#000",
+                    type: "square"
+                },
+                backgroundOptions: {
+                    color: "#ffffff"
+                }
             });
     
-            // Prepare QR container
+            // Render QR Code
             const qrContainer = document.getElementById('bill-qr-code');
             qrContainer.innerHTML = '';
             qrCode.append(qrContainer);
-            await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Calculate dynamic height
-            let requiredHeight = 5; // Initial margin
-            requiredHeight += 6;    // Invoice header
-            requiredHeight += 6;    // Date/Time
-            requiredHeight += 4;    // Table header
-            requiredHeight += cart.length * 6; // Items
-            requiredHeight += 4;    // After items
-            requiredHeight += 10;   // Total amount
-            requiredHeight += 60;   // QR code
-            requiredHeight = Math.max(requiredHeight, 80); // Minimum height
-    
-            // Create PDF with mobile-optimized dimensions
+            // Create PDF optimized for thermal printer
             const doc = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [100, requiredHeight],
-                hotfixes: ['pxscaling'],
-                filters: ['ASCIIHexEncode']
-            });
-    
-            // PDF metadata for mobile viewers
-            doc.internal.scaleFactor = 1.8;
-            doc.setProperties({
-                title: `Invoice_${Date.now()}`,
-                subject: 'Transaction Receipt',
-                creator: 'Your Store Name',
-                keywords: 'invoice, receipt'
+                format: [80, 'auto'] // Standard thermal printer width
             });
     
             let yPos = 5;
+            const lineHeight = 8;
+            const margin = 5;
+            const maxWidth = 70;
     
-            // Header Section
-            doc.setFontSize(14);
-            doc.text("INVOICE", 50, yPos, { align: 'center' });
-            yPos += 8;
+            // Set bold font and larger text sizes
+            doc.setFont('helvetica', 'bold');
+            
+            // Header
+            doc.setFontSize(16);
+            doc.text("INVOICE", margin, yPos, { align: 'left' });
+            yPos += lineHeight;
     
-            // Date/Time
-            doc.setFontSize(10);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 10, yPos);
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 60, yPos);
-            yPos += 8;
+            // Invoice Details
+            doc.setFontSize(12);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPos);
+            doc.text(`Time: ${new Date().toLocaleTimeString()}`, margin + 45, yPos);
+            yPos += lineHeight;
     
-            // Table Header
-            doc.setLineWidth(0.2);
-            doc.line(10, yPos, 90, yPos);
-            doc.setFontSize(10);
-            doc.text("Item", 10, yPos + 4);
-            doc.text("Qty", 60, yPos + 4);
-            doc.text("Price", 80, yPos + 4, { align: 'right' });
-            yPos += 8;
+            // Divider line
+            doc.setLineWidth(0.5);
+            doc.line(margin, yPos, 75, yPos);
+            yPos += lineHeight;
+    
+            // Items Header
+            doc.setFontSize(12);
+            doc.text("ITEM", margin, yPos);
+            doc.text("QTY", margin + 45, yPos);
+            doc.text("PRICE", margin + 60, yPos);
+            yPos += lineHeight;
     
             // Items List
             cart.forEach(item => {
                 const product = productDetails[item.code];
-                doc.setFontSize(9);
-                doc.text(product?.name || 'Unknown Item', 12, yPos);
-                doc.text(item.quantity.toString(), 60, yPos);
-                doc.text(`₹${(product?.price * item.quantity).toFixed(2)}`, 80, yPos, { align: 'right' });
-                yPos += 6;
+                const itemName = product?.name || 'Unknown Item';
+                const price = (product?.price * item.quantity).toFixed(2);
+                
+                // Split long item names into multiple lines
+                const splitName = doc.splitTextToSize(itemName, 40);
+                splitName.forEach((line, index) => {
+                    doc.text(line, margin, yPos + (index * lineHeight/2));
+                });
+                
+                doc.text(item.quantity.toString(), margin + 50, yPos);
+                doc.text(`₹${price}`, margin + 65, yPos);
+                
+                // Adjust yPos based on number of lines
+                yPos += (splitName.length * lineHeight/2) + lineHeight/2;
             });
     
-            // Total Amount
-            doc.setFontSize(11);
-            doc.setLineWidth(0.3);
-            doc.line(10, yPos, 90, yPos);
-            yPos += 5;
-            doc.text(`Total Amount: ₹${totalAmount.toFixed(2)}`, 60, yPos, { align: 'right' });
-            yPos += 10;
+            // Total
+            yPos += lineHeight;
+            doc.setFontSize(14);
+            doc.text(`TOTAL: ₹${totalAmount.toFixed(2)}`, margin, yPos);
+            yPos += lineHeight * 2;
     
-            // QR Code
+            // Add QR Code
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 20, yPos, 60, 60);
+                doc.addImage(qrData, 'PNG', margin + 10, yPos, 60, 60);
                 yPos += 65;
             }
     
-            // Add footer for mobile boundary detection
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text("Generated by Your Store Name", 50, requiredHeight - 5, { align: 'center' });
+            // Footer
+            doc.setFontSize(10);
+            doc.text("Thank you for your purchase!", margin, yPos, { align: 'left' });
     
             // Save to history
             billHistory.push({
@@ -279,23 +276,9 @@ domReady(function () {
             displayCart();
             updateDashboard();
     
-            // Mobile-friendly output
+            // Open PDF
             const pdfBlob = doc.output('blob');
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            
-            // Open in new window with mobile hints
-            const newWindow = window.open('', '_blank');
-            newWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Invoice</title>
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-                    </head>
-                    <body style="margin:0;padding:0">
-                        <embed width="100%" height="100%" src="${pdfUrl}" type="application/pdf">
-                    </body>
-                </html>
-            `);
+            window.open(URL.createObjectURL(pdfBlob), '_blank');
     
         } catch (error) {
             alert(`Error: ${error.message}`);
