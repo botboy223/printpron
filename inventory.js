@@ -170,8 +170,8 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 150,  // Smaller QR code but still large enough for thermal printer
-                height: 150, // Adjusted size
+                width: 150,  // Larger QR code but still manageable for small printers
+                height: 150, // Adjusted size for the QR code
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
@@ -190,18 +190,18 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF with thermal printer-friendly layout
+            // Create PDF with a flexible layout
             const doc = new jsPDF({
                 unit: 'mm',      // Use millimeters for size
-                format: [80, 250] // Custom format (80mm width) for mini POS thermal printers
+                format: [80, 250] // Custom size for thermal printers (80mm wide)
             });
     
             let yPos = 10;
     
-            // Header (Larger font)
+            // Header (larger font)
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
-            doc.text("INVOICE", 40, yPos);  // Center text in a narrow width
+            doc.text("INVOICE", 40, yPos);  // Center text in narrow format
             yPos += 10;
     
             // Invoice Details
@@ -211,7 +211,7 @@ domReady(function () {
             doc.text(`Time: ${new Date().toLocaleTimeString()}`, 10, yPos + 6);
             yPos += 15;
     
-            // Table Header (Bigger font for clarity)
+            // Table Header (larger font)
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10);
             doc.text("Item", 10, yPos);
@@ -230,17 +230,23 @@ domReady(function () {
                 yPos += 8;
             });
     
-            // Total (Bold and larger font)
+            // Total (bold and larger font)
             yPos += 10;
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
             doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 10, yPos);
     
-            // Add QR Code
+            // Add QR Code (adjusted dynamically)
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 20, yPos + 5, 40, 40); // Adjusted QR size
+                doc.addImage(qrData, 'PNG', 20, yPos + 5, 40, 40); // Adjust QR size
+                yPos += 45;  // Increase position after QR code
+            }
+    
+            // Final check to avoid excess space
+            if (yPos < 240) {
+                doc.text('Thank you for your purchase!', 10, yPos);
             }
     
             // Save to history
@@ -269,18 +275,6 @@ domReady(function () {
             alert(`Error: ${error.message}`);
             console.error(error);
         }
-    });
-
-    // UPI Form Handler
-    document.getElementById('qrForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        upiDetails = {
-            upiId: document.getElementById('upi_id').value.trim(),
-            name: document.getElementById('name').value.trim(),
-            note: document.getElementById('note').value.trim()
-        };
-        saveToLocalStorage('upiDetails', upiDetails);
-        alert('UPI details saved!');
     });
 
     // Import/Export Handlers
