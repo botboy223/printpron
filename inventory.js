@@ -186,7 +186,7 @@ domReady(function () {
             const doc = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [48, 10] // Initial height, will adjust dynamically
+                format: [48, 70] // Initial height, will adjust dynamically
             });
             doc.setFont("courier");
             doc.setFontSize(8);
