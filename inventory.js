@@ -200,7 +200,7 @@ domReady(function () {
             doc.setFont("courier"); // Use a monospaced font for alignment
             doc.setFontSize(8); // Small font size for narrow paper
     
-            let yPos = 2; // Start position
+            let yPos = 2; // Start position (2mm from the top)
             const lineHeight = 4; // Space between lines
             const pageWidth = 58; // Width of the thermal paper
             const maxLineWidth = 50; // Max width for text to fit on 58mm paper
@@ -296,7 +296,6 @@ domReady(function () {
         saveToLocalStorage('upiDetails', upiDetails);
         alert('UPI details saved!');
     });
-
     // Bill History Display
     document.getElementById('option5-button').addEventListener('click', () => {
         const historyContainer = document.getElementById('bill-history');
