@@ -170,8 +170,8 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 120, // Reduced for preview, will scale in PDF
-                height: 120,
+                width: 150, // Increased for clarity, scaled in PDF
+                height: 150,
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
@@ -192,16 +192,16 @@ domReady(function () {
     
             // Printer dimensions
             const pageWidth = 48;    // 2-inch printer width in mm
-            const margin = 1;        // Reduced margin to maximize space
+            const margin = 1;        // Small margin to maximize space
             const maxLineWidth = pageWidth - (margin * 2); // Usable width: 46mm
-            const lineHeight = 3;    // Reduced line height for compactness
+            const lineHeight = 4;    // Increased for readability
     
             // Calculate content height
             let contentHeight = 0;
             const headerHeight = lineHeight * 4; // Title + Date + Time + Separator
             const footerHeight = lineHeight * 2; // Total + spacing
-            const qrHeight = 30;         // Reduced QR code height to fit
-            const paddingBottom = 5;     // Minimal bottom padding
+            const qrHeight = 40;         // Increased QR code size
+            const paddingBottom = 8;     // Slightly increased padding
     
             // Items height
             const itemsHeight = cart.length === 0 
@@ -221,17 +221,17 @@ domReady(function () {
             });
     
             doc.setFont("courier");
-            doc.setFontSize(6); // Smaller font size to fit 48mm width
+            doc.setFontSize(8); // Increased font size for visibility
     
-            let yPos = margin; // Start with reduced top margin
+            let yPos = margin; // Start with small top margin
     
             // Header
-            doc.setFontSize(8);
+            doc.setFontSize(10); // Larger header
             doc.text("INVOICE", pageWidth / 2, yPos, { align: 'center' });
             yPos += lineHeight;
     
             // Date and Time
-            doc.setFontSize(6);
+            doc.setFontSize(8);
             doc.text(`Dt:${new Date().toLocaleDateString()}`, margin, yPos);
             yPos += lineHeight;
             doc.text(`Tm:${new Date().toLocaleTimeString()}`, margin, yPos);
@@ -248,9 +248,9 @@ domReady(function () {
             } else {
                 cart.forEach(item => {
                     const product = productDetails[item.code];
-                    const name = (product?.name || 'Unk').substring(0, 14).padEnd(14, ' ');
+                    const name = (product?.name || 'Unk').substring(0, 12).padEnd(12, ' ');
                     const qty = item.quantity.toString().padStart(2, ' ');
-                    const amount = (product?.price * item.quantity).toFixed(2).padStart(6, ' ');
+                    const amount = (product?.price * item.quantity).toFixed(2).padStart(7, ' ');
                     const itemLine = `${name}x${qty}Rs${amount}`;
                     doc.text(itemLine.substring(0, maxLineWidth), margin, yPos);
                     yPos += lineHeight;
@@ -269,7 +269,7 @@ domReady(function () {
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                const qrWidth = 30; // Reduced to fit 48mm width
+                const qrWidth = 40; // Increased to 40mm for visibility
                 const qrX = (pageWidth - qrWidth) / 2; // Center QR code
                 doc.addImage(qrData, 'PNG', qrX, yPos, qrWidth, qrWidth);
                 yPos += qrHeight;
