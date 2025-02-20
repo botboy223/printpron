@@ -170,8 +170,8 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 150,  // Larger QR code but still manageable for small printers
-                height: 150, // Adjusted size for the QR code
+                width: 100, // Smaller QR code for thermal printer
+                height: 100,
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
@@ -190,63 +190,60 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF with a flexible layout
+            // Create PDF with custom page size (58mm width, dynamic height)
             const doc = new jsPDF({
-                unit: 'mm',      // Use millimeters for size
-                format: [80, 250] // Custom size for thermal printers (80mm wide)
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [58, 1000], // 58mm width, dynamic height (1000mm is just a placeholder)
             });
     
-            let yPos = 10;
+            let yPos = 10; // Start position
     
-            // Header (larger font)
-            doc.setFont('helvetica', 'bold');
+            // Header
             doc.setFontSize(12);
-            doc.text("INVOICE", 40, yPos);  // Center text in narrow format
-            yPos += 10;
-    
-            // Invoice Details
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 10, yPos);
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 10, yPos + 6);
-            yPos += 15;
-    
-            // Table Header (larger font)
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
-            doc.text("Item", 10, yPos);
-            doc.text("Qty", 50, yPos);
-            doc.text("Price", 70, yPos);
+            doc.text("INVOICE", 29, yPos, { align: 'center' }); // Center align
             yPos += 8;
     
+            // Invoice Details
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 2, yPos);
+            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 30, yPos);
+            yPos += 6;
+    
+            // Table Header
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Item", 2, yPos);
+            doc.text("Qty", 35, yPos);
+            doc.text("Price", 45, yPos);
+            yPos += 5;
+    
             // Items
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
             cart.forEach(item => {
                 const product = productDetails[item.code];
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal'); // Normal font for item details
-                doc.text(product?.name || 'Unknown Item', 10, yPos);
-                doc.text(item.quantity.toString(), 50, yPos);
-                doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 70, yPos);
-                yPos += 8;
+                doc.text(product?.name || 'Unknown Item', 2, yPos);
+                doc.text(item.quantity.toString(), 35, yPos);
+                doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 45, yPos);
+                yPos += 5; // Adjust spacing between items
             });
     
-            // Total (bold and larger font)
-            yPos += 10;
-            doc.setFontSize(12);
+            // Total
+            yPos += 5;
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
-            doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 10, yPos);
+            doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 2, yPos);
+            yPos += 8;
     
-            // Add QR Code dynamically
+            // Add QR Code
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 20, yPos + 5, 40, 40); // Adjust QR size
-                yPos += 45;  // Increase position after QR code
-            }
-    
-            // Final check to avoid excess space
-            if (yPos < 240) {
-                doc.text('Thank you for your purchase!', 10, yPos);
+                doc.addImage(qrData, 'PNG', 15, yPos, 30, 30); // Smaller QR code
+                yPos += 35; // Adjust spacing after QR code
             }
     
             // Save to history
@@ -267,6 +264,11 @@ domReady(function () {
             displayCart();
             updateDashboard();
     
+            // Set final PDF height dynamically
+            const finalHeight = yPos + 10; // Add small margin at the bottom
+            doc.deletePage(1); // Remove the initial placeholder page
+            doc.addPage([58, finalHeight], 'portrait'); // Add a new page with the correct height
+    
             // Open PDF
             const pdfBlob = doc.output('blob');
             window.open(URL.createObjectURL(pdfBlob), '_blank');
@@ -276,7 +278,6 @@ domReady(function () {
             console.error(error);
         }
     });
-
 
     // Import/Export Handlers
     document.getElementById('download-data').addEventListener('click', () => {
