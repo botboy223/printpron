@@ -163,14 +163,14 @@ domReady(function () {
     
             // Generate UPI URL
             const upiUrl = `upi://pay?pa=${upiDetails.upiId}` +
-                            `&pn=${encodeURIComponent(upiDetails.name)}` +
-                            `&am=${totalAmount.toFixed(2)}` +
-                            `&cu=INR` +
-                            `&tn=${encodeURIComponent(upiDetails.note)}`;
+                           `&pn=${encodeURIComponent(upiDetails.name)}` +
+                           `&am=${totalAmount.toFixed(2)}` +
+                           `&cu=INR` +
+                           `&tn=${encodeURIComponent(upiDetails.note)}`;
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 200, // QR code size
+                width: 200,
                 height: 200,
                 data: upiUrl,
                 dotsOptions: {
@@ -190,20 +190,40 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF for POS (58mm width)
+            // Calculate content height first
+            const lineHeight = 4;    // Space between lines
+            const pageWidth = 58;    // Width of thermal paper
+            const margin = 2;        // Left/right margin
+            const maxLineWidth = pageWidth - (margin * 2); // Adjusted usable width
+            
+            // Height calculation components
+            let contentHeight = 0;
+            const headerHeight = lineHeight * 4; // Title + Date + Time + Separator
+            const footerHeight = lineHeight * 2; // Total + spacing
+            const qrHeight = 50;         // QR code height
+            const paddingBottom = 10;    // Bottom padding
+            
+            // Calculate items height
+            const itemsHeight = cart.length === 0 
+                ? lineHeight 
+                : cart.length * lineHeight;
+            const separatorHeight = lineHeight * 2; // Two separators
+    
+            // Total calculated height
+            contentHeight = headerHeight + itemsHeight + separatorHeight + 
+                           footerHeight + qrHeight + paddingBottom;
+    
+            // Create PDF with dynamic height
             const doc = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [58, 100] // Initial height, will adjust dynamically
+                format: [pageWidth, contentHeight]
             });
     
-            doc.setFont("courier"); // Use a monospaced font for alignment
-            doc.setFontSize(8); // Small font size for narrow paper
+            doc.setFont("courier");
+            doc.setFontSize(8);
     
-            let yPos = 2; // Start position (2mm from the top)
-            const lineHeight = 4; // Space between lines
-            const pageWidth = 58; // Width of the thermal paper
-            const maxLineWidth = 50; // Max width for text to fit on 58mm paper
+            let yPos = margin; // Start with top margin
     
             // Header
             doc.setFontSize(10);
@@ -211,30 +231,34 @@ domReady(function () {
             yPos += lineHeight;
     
             // Date and Time
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 2, yPos);
+            doc.setFontSize(8);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPos);
             yPos += lineHeight;
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 2, yPos);
+            doc.text(`Time: ${new Date().toLocaleTimeString()}`, margin, yPos);
             yPos += lineHeight;
     
             // Separator
-            doc.text("-".repeat(maxLineWidth), pageWidth / 2, yPos, { align: 'center' });
+            doc.text("-".repeat(maxLineWidth / 2), pageWidth / 2, yPos, { align: 'center' });
             yPos += lineHeight;
     
             // Items or Empty Message
             if (cart.length === 0) {
-                doc.text("No Items", 2, yPos); // Left-aligned placeholder
+                doc.text("No Items in Cart", margin, yPos);
                 yPos += lineHeight;
             } else {
                 cart.forEach(item => {
                     const product = productDetails[item.code];
-                    const itemLine = `${(product?.name || 'Unknown').substring(0, 20)} x${item.quantity.toString().padStart(2, ' ')} Rs.${(product?.price * item.quantity).toFixed(2).padStart(8, ' ')}`;
-                    doc.text(itemLine.substring(0, maxLineWidth), 2, yPos);
+                    const name = (product?.name || 'Unknown').substring(0, 20).padEnd(20, ' ');
+                    const qty = item.quantity.toString().padStart(3, ' ');
+                    const amount = (product?.price * item.quantity).toFixed(2).padStart(8, ' ');
+                    const itemLine = `${name} x${qty} Rs.${amount}`;
+                    doc.text(itemLine.substring(0, maxLineWidth), margin, yPos);
                     yPos += lineHeight;
                 });
             }
     
             // Separator
-            doc.text("-".repeat(maxLineWidth), pageWidth / 2, yPos, { align: 'center' });
+            doc.text("-".repeat(maxLineWidth / 2), pageWidth / 2, yPos, { align: 'center' });
             yPos += lineHeight;
     
             // Total
@@ -245,19 +269,13 @@ domReady(function () {
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 4, yPos, 50, 50); // Position QR code with padding
-                yPos += 50; // Move yPos down after adding QR code
+                const qrWidth = 50;
+                const qrX = (pageWidth - qrWidth) / 2; // Center the QR code
+                doc.addImage(qrData, 'PNG', qrX, yPos, qrWidth, qrWidth);
+                yPos += qrHeight;
             }
     
-            // Add extra space below the QR code for cutting
-            yPos += 10; // Add 10mm of padding below the QR code
-    
-            // Set dynamic height with a minimum to avoid cropping
-            const minHeight = 80; // Minimum height to ensure header + QR code + padding fit
-            const calculatedHeight = yPos + 2; // Content height + buffer
-            doc.internal.pageSize.height = Math.max(minHeight, calculatedHeight);
-    
-            // Save to history (even if empty)
+            // Save to history
             billHistory.push({
                 date: new Date().toLocaleString(),
                 total: totalAmount.toFixed(2),
@@ -265,12 +283,10 @@ domReady(function () {
             });
             saveToLocalStorage('billHistory', billHistory);
     
-            // Update inventory and save changes after bill generation
+            // Update inventory and clear cart
             cart.forEach(item => {
                 updateInventory(item.code, item.quantity);
             });
-    
-            // Clear cart
             cart = [];
             displayCart();
             updateDashboard();
@@ -285,7 +301,7 @@ domReady(function () {
         }
     });
     
-    // UPI Form Handler
+    // UPI Form Handler (unchanged)
     document.getElementById('qrForm').addEventListener('submit', (e) => {
         e.preventDefault();
         upiDetails = {
