@@ -199,14 +199,14 @@ domReady(function () {
             let yPos = 20;
     
             // Header
+            doc.setFont('helvetica', 'bold');  // Use helvetica font with bold style
             doc.setFontSize(18);
-            doc.setFont('helvetica', 'bold');  // Set font to bold
             doc.text("INVOICE", 105, yPos, { align: 'center' });
             yPos += 15;
     
             // Invoice Details
-            doc.setFontSize(12);
             doc.setFont('helvetica', 'normal'); // Set font to normal for the details
+            doc.setFontSize(12);
             doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPos);
             doc.text(`Time: ${new Date().toLocaleTimeString()}`, 160, yPos);
             yPos += 15;
@@ -214,6 +214,7 @@ domReady(function () {
             // Table Header
             doc.setFillColor(240, 240, 240);
             doc.rect(20, yPos, 170, 10, 'F');
+            doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.text("Item", 22, yPos + 7);
             doc.text("Qty", 100, yPos + 7);
@@ -223,8 +224,8 @@ domReady(function () {
             // Items
             cart.forEach(item => {
                 const product = productDetails[item.code];
+                doc.setFont('helvetica', 'normal');  // Use normal font for item details
                 doc.setFontSize(12);  // Bigger text for better readability
-                doc.setFont('helvetica', 'bold');  // Bold text for better visibility on thermal printers
                 doc.text(product?.name || 'Unknown Item', 22, yPos);
                 doc.text(item.quantity.toString(), 100, yPos);
                 doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 160, yPos);
@@ -233,8 +234,8 @@ domReady(function () {
     
             // Total
             yPos += 10;
-            doc.setFontSize(14);
             doc.setFont('helvetica', 'bold');  // Bold font for total
+            doc.setFontSize(14);
             doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 20, yPos);
     
             // Add QR Code
