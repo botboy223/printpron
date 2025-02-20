@@ -170,8 +170,8 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 250,  // Bigger QR code
-                height: 250, // Bigger QR code
+                width: 150,  // Smaller QR code but still large enough for thermal printer
+                height: 150, // Adjusted size
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
@@ -190,59 +190,57 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF
+            // Create PDF with thermal printer-friendly layout
             const doc = new jsPDF({
                 unit: 'mm',      // Use millimeters for size
-                format: 'a4'     // Set default page format
+                format: [80, 250] // Custom format (80mm width) for mini POS thermal printers
             });
     
-            let yPos = 20;
+            let yPos = 10;
     
-            // Header
-            doc.setFont('helvetica', 'bold');  // Use helvetica font with bold style
-            doc.setFontSize(18);
-            doc.text("INVOICE", 105, yPos, { align: 'center' });
-            yPos += 15;
-    
-            // Invoice Details
-            doc.setFont('helvetica', 'normal'); // Set font to normal for the details
-            doc.setFontSize(12);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPos);
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 160, yPos);
-            yPos += 15;
-    
-            // Table Header
-            doc.setFillColor(240, 240, 240);
-            doc.rect(20, yPos, 170, 10, 'F');
+            // Header (Larger font)
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
-            doc.text("Item", 22, yPos + 7);
-            doc.text("Qty", 100, yPos + 7);
-            doc.text("Price", 160, yPos + 7);
-            yPos += 12;
+            doc.text("INVOICE", 40, yPos);  // Center text in a narrow width
+            yPos += 10;
+    
+            // Invoice Details
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 10, yPos);
+            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 10, yPos + 6);
+            yPos += 15;
+    
+            // Table Header (Bigger font for clarity)
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text("Item", 10, yPos);
+            doc.text("Qty", 50, yPos);
+            doc.text("Price", 70, yPos);
+            yPos += 8;
     
             // Items
             cart.forEach(item => {
                 const product = productDetails[item.code];
-                doc.setFont('helvetica', 'normal');  // Use normal font for item details
-                doc.setFontSize(12);  // Bigger text for better readability
-                doc.text(product?.name || 'Unknown Item', 22, yPos);
-                doc.text(item.quantity.toString(), 100, yPos);
-                doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 160, yPos);
-                yPos += 10;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal'); // Normal font for item details
+                doc.text(product?.name || 'Unknown Item', 10, yPos);
+                doc.text(item.quantity.toString(), 50, yPos);
+                doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 70, yPos);
+                yPos += 8;
             });
     
-            // Total
+            // Total (Bold and larger font)
             yPos += 10;
-            doc.setFont('helvetica', 'bold');  // Bold font for total
-            doc.setFontSize(14);
-            doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 20, yPos);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 10, yPos);
     
             // Add QR Code
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 140, yPos - 10, 50, 50); // Adjust QR size
+                doc.addImage(qrData, 'PNG', 20, yPos + 5, 40, 40); // Adjusted QR size
             }
     
             // Save to history
