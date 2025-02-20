@@ -190,51 +190,54 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF
+            // Create PDF for Thermal Printer
             const doc = new jsPDF({
                 unit: "mm",
-                format: "a4",
+                format: [58, 1000], // 58mm width (2 inches), dynamic height
                 orientation: "portrait"
             });
     
-            // Custom layout for POS Printer (simplified for narrow paper)
-            let yPos = 10;
+            // Set font and initial position
+            doc.setFont('courier', 'normal'); // Monospaced font for alignment
+            let yPos = 5; // Start position
     
             // Header
-            doc.setFontSize(16); // Bold and large header
-            doc.setFont('helvetica', 'bold');
-            doc.text("INVOICE", 105, yPos, { align: 'center' });
-            yPos += 10;
-    
-            // Invoice Details
             doc.setFontSize(12);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 10, yPos);
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 110, yPos);
-            yPos += 10;
+            doc.setFont('courier', 'bold');
+            doc.text("INVOICE", 29, yPos, { align: 'center' }); // Center align
+            yPos += 6;
+    
+            // Date and Time
+            doc.setFontSize(10);
+            doc.setFont('courier', 'normal');
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 2, yPos);
+            yPos += 5;
+            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 2, yPos);
+            yPos += 8;
     
             // Items List
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'normal');
             cart.forEach(item => {
                 const product = productDetails[item.code];
-                doc.text(`Item: ${product?.name || 'Unknown Item'}`, 10, yPos);
-                doc.text(`Qty: ${item.quantity}`, 110, yPos);
-                doc.text(`Price: Rs. ${(product?.price * item.quantity).toFixed(2)}`, 160, yPos);
-                yPos += 8;
+                doc.text(`${product?.name || 'Unknown Item'}`, 2, yPos);
+                doc.text(`Qty: ${item.quantity}`, 40, yPos);
+                doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 50, yPos);
+                yPos += 6;
             });
     
             // Total Amount
+            yPos += 6;
+            doc.setFontSize(12);
+            doc.setFont('courier', 'bold');
+            doc.text(`Total: Rs. ${totalAmount.toFixed(2)}`, 2, yPos);
             yPos += 10;
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text(`Total: Rs. ${totalAmount.toFixed(2)}`, 10, yPos);
     
-            // Add QR Code (enlarged for POS printer)
+            // Add QR Code (full width)
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 105, yPos + 10, 50, 50); // Adjusted size for POS
+                const qrWidth = 50; // Full width of the paper (58mm - margins)
+                const qrHeight = 50; // Maintain aspect ratio
+                doc.addImage(qrData, 'PNG', 4, yPos, qrWidth, qrHeight); // Centered QR code
             }
     
             // Save to history
@@ -249,13 +252,13 @@ domReady(function () {
             cart.forEach(item => {
                 updateInventory(item.code, item.quantity);
             });
-            
+    
             // Clear cart
             cart = [];
             displayCart();
             updateDashboard();
     
-            // Open PDF
+            // Open PDF for printing
             const pdfBlob = doc.output('blob');
             window.open(URL.createObjectURL(pdfBlob), '_blank');
     
@@ -264,8 +267,7 @@ domReady(function () {
             console.error(error);
         }
     });
-
-
+    
 
     // Import/Export Handlers
     document.getElementById('download-data').addEventListener('click', () => {
