@@ -155,13 +155,13 @@ domReady(function () {
                 throw new Error('Please configure UPI details first');
             }
     
-            // Calculate total (0 if cart is empty)
+            // Calculate total
             const totalAmount = cart.reduce((sum, item) => {
                 const product = productDetails[item.code];
                 return sum + (product?.price || 0) * item.quantity;
             }, 0);
     
-            // Generate UPI URL (works with zero amount if allowed by UPI app)
+            // Generate UPI URL
             const upiUrl = `upi://pay?pa=${upiDetails.upiId}` +
                             `&pn=${encodeURIComponent(upiDetails.name)}` +
                             `&am=${totalAmount.toFixed(2)}` +
@@ -170,38 +170,49 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 384, // 48mm at 203 DPI
-                height: 384,
+                width: 200, // QR code size
+                height: 200,
                 data: upiUrl,
-                dotsOptions: { color: "#000", type: "square" },
-                backgroundOptions: { color: "#ffffff" }
+                dotsOptions: {
+                    color: "#000",
+                    type: "rounded"
+                },
+                backgroundOptions: {
+                    color: "#ffffff"
+                }
             });
     
+            // Render QR Code
             const qrContainer = document.getElementById('bill-qr-code');
             qrContainer.innerHTML = '';
             qrCode.append(qrContainer);
+    
+            // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF with 48mm width
+            // Create PDF for POS (58mm width)
             const doc = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [48, 80] // Initial height, will adjust dynamically
+                format: [58, 100] // Initial height, will adjust dynamically
             });
+    
             doc.setFont("courier");
             doc.setFontSize(8);
     
-            let yPos = 2;
+            let yPos = 2; // Start position
             const lineHeight = 4;
-            const pageWidth = 48;
-            const maxLineWidth = 40;
+            const pageWidth = 58;
+            const maxLineWidth = 50; // Max width for text to fit on 58mm paper
     
             // Header
+            doc.setFontSize(10);
             doc.text("INVOICE", pageWidth / 2, yPos, { align: 'center' });
             yPos += lineHeight;
     
             // Date and Time
-            doc.text(`${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`.substring(0, maxLineWidth), pageWidth / 2, yPos, { align: 'center' });
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 2, yPos);
+            doc.text(`Time: ${new Date().toLocaleTimeString()}`, pageWidth / 2, yPos, { align: 'center' });
             yPos += lineHeight;
     
             // Separator
@@ -233,8 +244,8 @@ domReady(function () {
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                doc.addImage(qrData, 'PNG', 0, yPos, pageWidth, pageWidth); // 48mm x 48mm
-                yPos += pageWidth;
+                doc.addImage(qrData, 'PNG', 4, yPos, 50, 50); // Position QR code with padding
+                yPos += 50; // Move yPos down after adding QR code
             }
     
             // Add extra space below the QR code for cutting
@@ -253,6 +264,11 @@ domReady(function () {
             });
             saveToLocalStorage('billHistory', billHistory);
     
+            // Update inventory and save changes after bill generation
+            cart.forEach(item => {
+                updateInventory(item.code, item.quantity);
+            });
+    
             // Clear cart
             cart = [];
             displayCart();
@@ -266,6 +282,18 @@ domReady(function () {
             alert(`Error: ${error.message}`);
             console.error(error);
         }
+    });
+    
+    // UPI Form Handler
+    document.getElementById('qrForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        upiDetails = {
+            upiId: document.getElementById('upi_id').value.trim(),
+            name: document.getElementById('name').value.trim(),
+            note: document.getElementById('note').value.trim()
+        };
+        saveToLocalStorage('upiDetails', upiDetails);
+        alert('UPI details saved!');
     });
 
     // Bill History Display
