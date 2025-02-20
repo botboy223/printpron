@@ -197,12 +197,12 @@ domReady(function () {
                 format: [58, 100] // Initial height, will adjust dynamically
             });
     
-            doc.setFont("courier");
-            doc.setFontSize(8);
+            doc.setFont("courier"); // Use a monospaced font for alignment
+            doc.setFontSize(8); // Small font size for narrow paper
     
             let yPos = 2; // Start position
-            const lineHeight = 4;
-            const pageWidth = 58;
+            const lineHeight = 4; // Space between lines
+            const pageWidth = 58; // Width of the thermal paper
             const maxLineWidth = 50; // Max width for text to fit on 58mm paper
     
             // Header
@@ -212,7 +212,8 @@ domReady(function () {
     
             // Date and Time
             doc.text(`Date: ${new Date().toLocaleDateString()}`, 2, yPos);
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, pageWidth / 2, yPos, { align: 'center' });
+            yPos += lineHeight;
+            doc.text(`Time: ${new Date().toLocaleTimeString()}`, 2, yPos);
             yPos += lineHeight;
     
             // Separator
