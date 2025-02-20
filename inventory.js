@@ -186,7 +186,7 @@ domReady(function () {
             const doc = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [48, 70] // Initial height, will adjust dynamically
+                format: [48, 80] // Initial height, will adjust dynamically
             });
             doc.setFont("courier");
             doc.setFontSize(8);
@@ -237,8 +237,11 @@ domReady(function () {
                 yPos += pageWidth;
             }
     
+            // Add extra space below the QR code for cutting
+            yPos += 10; // Add 10mm of padding below the QR code
+    
             // Set dynamic height with a minimum to avoid cropping
-            const minHeight = 70; // Minimum height to ensure header + QR code fit (adjust as needed)
+            const minHeight = 80; // Minimum height to ensure header + QR code + padding fit
             const calculatedHeight = yPos + 2; // Content height + buffer
             doc.internal.pageSize.height = Math.max(minHeight, calculatedHeight);
     
