@@ -193,7 +193,7 @@ domReady(function () {
             // Create PDF for Thermal Printer
             const doc = new jsPDF({
                 unit: "mm",
-                format: [58, 1000], // 58mm width (2 inches), dynamic height
+                format: [58, 1000], // 58mm width (2 inches), initial height (will be adjusted dynamically)
                 orientation: "portrait"
             });
     
@@ -238,7 +238,13 @@ domReady(function () {
                 const qrWidth = 50; // Full width of the paper (58mm - margins)
                 const qrHeight = 50; // Maintain aspect ratio
                 doc.addImage(qrData, 'PNG', 4, yPos, qrWidth, qrHeight); // Centered QR code
+                yPos += qrHeight + 10; // Add space after QR code
             }
+    
+            // Calculate dynamic height
+            const dynamicHeight = yPos + 10; // Add some padding at the bottom
+            doc.deletePage(1); // Delete the initial page with fixed height
+            doc.addPage([58, dynamicHeight], 'portrait'); // Add a new page with dynamic height
     
             // Save to history
             billHistory.push({
@@ -267,7 +273,7 @@ domReady(function () {
             console.error(error);
         }
     });
-    
+        
 
     // Import/Export Handlers
     document.getElementById('download-data').addEventListener('click', () => {
