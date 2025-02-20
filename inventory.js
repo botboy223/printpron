@@ -170,8 +170,8 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 200,
-                height: 200,
+                width: 120, // Reduced for preview, will scale in PDF
+                height: 120,
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
@@ -190,51 +190,51 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Calculate content height first
-            const lineHeight = 4;    // Space between lines
-            const pageWidth = 58;    // Width of thermal paper
-            const margin = 2;        // Left/right margin
-            const maxLineWidth = pageWidth - (margin * 2); // Adjusted usable width
-            
-            // Height calculation components
+            // Printer dimensions
+            const pageWidth = 48;    // 2-inch printer width in mm
+            const margin = 1;        // Reduced margin to maximize space
+            const maxLineWidth = pageWidth - (margin * 2); // Usable width: 46mm
+            const lineHeight = 3;    // Reduced line height for compactness
+    
+            // Calculate content height
             let contentHeight = 0;
             const headerHeight = lineHeight * 4; // Title + Date + Time + Separator
             const footerHeight = lineHeight * 2; // Total + spacing
-            const qrHeight = 50;         // QR code height
-            const paddingBottom = 10;    // Bottom padding
-            
-            // Calculate items height
+            const qrHeight = 30;         // Reduced QR code height to fit
+            const paddingBottom = 5;     // Minimal bottom padding
+    
+            // Items height
             const itemsHeight = cart.length === 0 
                 ? lineHeight 
                 : cart.length * lineHeight;
             const separatorHeight = lineHeight * 2; // Two separators
     
-            // Total calculated height
+            // Total height
             contentHeight = headerHeight + itemsHeight + separatorHeight + 
                            footerHeight + qrHeight + paddingBottom;
     
-            // Create PDF with dynamic height
+            // Create PDF with calculated dimensions
             const doc = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [pageWidth, contentHeight]
+                format: [pageWidth, contentHeight] // 48mm width, dynamic height
             });
     
             doc.setFont("courier");
-            doc.setFontSize(8);
+            doc.setFontSize(6); // Smaller font size to fit 48mm width
     
-            let yPos = margin; // Start with top margin
+            let yPos = margin; // Start with reduced top margin
     
             // Header
-            doc.setFontSize(10);
+            doc.setFontSize(8);
             doc.text("INVOICE", pageWidth / 2, yPos, { align: 'center' });
             yPos += lineHeight;
     
             // Date and Time
-            doc.setFontSize(8);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPos);
+            doc.setFontSize(6);
+            doc.text(`Dt:${new Date().toLocaleDateString()}`, margin, yPos);
             yPos += lineHeight;
-            doc.text(`Time: ${new Date().toLocaleTimeString()}`, margin, yPos);
+            doc.text(`Tm:${new Date().toLocaleTimeString()}`, margin, yPos);
             yPos += lineHeight;
     
             // Separator
@@ -243,15 +243,15 @@ domReady(function () {
     
             // Items or Empty Message
             if (cart.length === 0) {
-                doc.text("No Items in Cart", margin, yPos);
+                doc.text("No Items", margin, yPos);
                 yPos += lineHeight;
             } else {
                 cart.forEach(item => {
                     const product = productDetails[item.code];
-                    const name = (product?.name || 'Unknown').substring(0, 20).padEnd(20, ' ');
-                    const qty = item.quantity.toString().padStart(3, ' ');
-                    const amount = (product?.price * item.quantity).toFixed(2).padStart(8, ' ');
-                    const itemLine = `${name} x${qty} Rs.${amount}`;
+                    const name = (product?.name || 'Unk').substring(0, 14).padEnd(14, ' ');
+                    const qty = item.quantity.toString().padStart(2, ' ');
+                    const amount = (product?.price * item.quantity).toFixed(2).padStart(6, ' ');
+                    const itemLine = `${name}x${qty}Rs${amount}`;
                     doc.text(itemLine.substring(0, maxLineWidth), margin, yPos);
                     yPos += lineHeight;
                 });
@@ -262,15 +262,15 @@ domReady(function () {
             yPos += lineHeight;
     
             // Total
-            doc.text(`Total: Rs. ${totalAmount.toFixed(2)}`, pageWidth / 2, yPos, { align: 'center' });
+            doc.text(`Tot:Rs${totalAmount.toFixed(2)}`, pageWidth / 2, yPos, { align: 'center' });
             yPos += lineHeight * 2;
     
             // Add QR Code
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
-                const qrWidth = 50;
-                const qrX = (pageWidth - qrWidth) / 2; // Center the QR code
+                const qrWidth = 30; // Reduced to fit 48mm width
+                const qrX = (pageWidth - qrWidth) / 2; // Center QR code
                 doc.addImage(qrData, 'PNG', qrX, yPos, qrWidth, qrWidth);
                 yPos += qrHeight;
             }
