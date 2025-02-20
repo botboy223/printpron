@@ -148,7 +148,7 @@ domReady(function () {
     });
 
     // PDF Generation
-    document.getElementById('generate-bill').addEventListener('click', async () => {
+   document.getElementById('generate-bill').addEventListener('click', async () => {
         try {
             // Validate UPI details
             if (!upiDetails.upiId || !upiDetails.name || !upiDetails.note) {
@@ -170,8 +170,8 @@ domReady(function () {
     
             // Create QR Code
             const qrCode = new QRCodeStyling({
-                width: 200, // Set size for thermal printing
-                height: 200, // Set size for thermal printing
+                width: 200,
+                height: 200,
                 data: upiUrl,
                 dotsOptions: {
                     color: "#000",
@@ -190,21 +190,28 @@ domReady(function () {
             // Wait for QR code rendering
             await new Promise(resolve => setTimeout(resolve, 500));
     
-            // Create PDF for Thermal Printer
+            // Calculate content height dynamically first
+            let yPos = 5; // Start position
+            const lineHeight = 6;
+            const qrHeight = 50; // QR code height in mm
+            const itemsHeight = cart.length * lineHeight; // Height for items
+            const totalHeight = yPos + 6 + 5 + 8 + itemsHeight + 6 + 10 + qrHeight + 10; // Total dynamic height
+    
+            // Create PDF with dynamic height
             const doc = new jsPDF({
                 unit: "mm",
-                format: [58, 1000], // 58mm width (2 inches), initial height (will be adjusted dynamically)
+                format: [58, totalHeight], // Set dynamic height directly
                 orientation: "portrait"
             });
     
             // Set font and initial position
-            doc.setFont('courier', 'normal'); // Monospaced font for alignment
-            let yPos = 5; // Start position
+            doc.setFont('courier', 'normal');
+            yPos = 5; // Reset yPos
     
             // Header
             doc.setFontSize(12);
             doc.setFont('courier', 'bold');
-            doc.text("INVOICE", 29, yPos, { align: 'center' }); // Center align
+            doc.text("INVOICE", 29, yPos, { align: 'center' });
             yPos += 6;
     
             // Date and Time
@@ -221,7 +228,7 @@ domReady(function () {
                 doc.text(`${product?.name || 'Unknown Item'}`, 2, yPos);
                 doc.text(`Qty: ${item.quantity}`, 40, yPos);
                 doc.text(`Rs. ${(product?.price * item.quantity).toFixed(2)}`, 50, yPos);
-                yPos += 6;
+                yPos += lineHeight;
             });
     
             // Total Amount
@@ -231,20 +238,14 @@ domReady(function () {
             doc.text(`Total: Rs. ${totalAmount.toFixed(2)}`, 2, yPos);
             yPos += 10;
     
-            // Add QR Code (full width)
+            // Add QR Code
             const qrCanvas = qrContainer.querySelector('canvas');
             if (qrCanvas) {
                 const qrData = qrCanvas.toDataURL('image/png');
                 const qrWidth = 50; // Full width of the paper (58mm - margins)
-                const qrHeight = 50; // Maintain aspect ratio
-                doc.addImage(qrData, 'PNG', 4, yPos, qrWidth, qrHeight); // Centered QR code
-                yPos += qrHeight + 10; // Add space after QR code
+                doc.addImage(qrData, 'PNG', 4, yPos, qrWidth, qrHeight);
+                yPos += qrHeight + 10;
             }
-    
-            // Calculate dynamic height
-            const dynamicHeight = yPos + 10; // Add some padding at the bottom
-            doc.deletePage(1); // Delete the initial page with fixed height
-            doc.addPage([58, dynamicHeight], 'portrait'); // Add a new page with dynamic height
     
             // Save to history
             billHistory.push({
@@ -254,7 +255,7 @@ domReady(function () {
             });
             saveToLocalStorage('billHistory', billHistory);
     
-            // Update inventory and save changes after bill generation
+            // Update inventory and save changes
             cart.forEach(item => {
                 updateInventory(item.code, item.quantity);
             });
